@@ -1,0 +1,95 @@
+{
+  "entities": {
+    "Match": {
+      "title": "Match",
+      "description": "A live match in the Agentic Premier League",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "homeTeam": { "type": "string" },
+        "awayTeam": { "type": "string" },
+        "homeScore": { "type": "integer" },
+        "awayScore": { "type": "integer" },
+        "status": { "type": "string", "enum": ["LIVE", "FINISHED", "UPCOMING"] },
+        "minute": { "type": "integer" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["homeTeam", "awayTeam", "homeScore", "awayScore", "status"]
+    },
+    "Poll": {
+      "title": "Poll",
+      "description": "A real-time poll for fans",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "matchId": { "type": "string" },
+        "question": { "type": "string" },
+        "options": { "type": "array", "items": { "type": "string" } },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["matchId", "question", "options", "active"]
+    },
+    "Vote": {
+      "title": "Vote",
+      "description": "A fan vote on a poll",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "pollId": { "type": "string" },
+        "userId": { "type": "string" },
+        "optionIndex": { "type": "integer" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["pollId", "userId", "optionIndex"]
+    },
+    "Reaction": {
+      "title": "Reaction",
+      "description": "Real-time fan reactions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "matchId": { "type": "string" },
+        "emoji": { "type": "string" },
+        "userId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["matchId", "emoji", "userId"]
+    },
+    "Insight": {
+      "title": "AI Insight",
+      "description": "AI-generated tactical insights",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "matchId": { "type": "string" },
+        "text": { "type": "string" },
+        "type": { "type": "string", "enum": ["TACTICAL", "PREDICTION", "MOMENT"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["matchId", "text", "type"]
+    }
+  },
+  "firestore": {
+    "/matches/{matchId}": {
+      "schema": "Match",
+      "description": "Live match data"
+    },
+    "/matches/{matchId}/polls/{pollId}": {
+      "schema": "Poll",
+      "description": "Polls associated with a match"
+    },
+    "/matches/{matchId}/polls/{pollId}/votes/{voteId}": {
+      "schema": "Vote",
+      "description": "Individual fan votes"
+    },
+    "/matches/{matchId}/reactions/{reactionId}": {
+      "schema": "Reaction",
+      "description": "Live fan reactions"
+    },
+    "/matches/{matchId}/insights/{insightId}": {
+      "schema": "Insight",
+      "description": "AI insights for the match"
+    }
+  }
+}
