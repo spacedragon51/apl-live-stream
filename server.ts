@@ -37,52 +37,76 @@ async function startServer() {
     striker: string;
     bowler: string;
     partnership: number;
-    status: 'LIVE' | 'FINISHED' | 'UPCOMING';
+    status: 'LIVE' | 'FINISHED' | 'UPCOMING' | 'DELAYED';
   }
 
   let matchState: CricketState = {
-    id: "ipl-2026-m01",
-    homeTeam: "Chennai Super Kings",
-    awayTeam: "Mumbai Indians",
-    batting: "Chennai Super Kings",
-    bowling: "Mumbai Indians",
-    score: 142,
-    wickets: 3,
-    overs: 15,
-    ballsInOver: 2,
-    crr: 9.35,
-    lastBalls: ["1", "4", "0", "1", "W", "2"],
-    striker: "Ruturaj Gaikwad",
-    bowler: "Jasprit Bumrah",
-    partnership: 24,
-    status: "LIVE"
+    id: "ipl-2026-rcb-kkr",
+    homeTeam: "Royal Challengers Bengaluru",
+    awayTeam: "Kolkata Knight Riders",
+    batting: "Royal Challengers Bengaluru",
+    bowling: "Kolkata Knight Riders",
+    score: 0,
+    wickets: 0,
+    overs: 0,
+    ballsInOver: 0,
+    crr: 0,
+    lastBalls: [],
+    striker: "Virat Kohli",
+    bowler: "Mitchell Starc",
+    partnership: 0,
+    status: "DELAYED"
   };
 
-  const cskPlayers = ["Ruturaj Gaikwad", "Daryl Mitchell", "Shivam Dube", "Ravindra Jadeja", "MS Dhoni"];
-  const miBowlers = ["Jasprit Bumrah", "Hardik Pandya", "Gerald Coetzee", "Piyush Chawla"];
+  let currentPoll: any = null;
+
+  const teamSquads: Record<string, string[]> = {
+    "Chennai Super Kings": ["Ruturaj Gaikwad", "Daryl Mitchell", "Shivam Dube", "Ravindra Jadeja", "MS Dhoni", "Matheesha Pathirana", "Tushar Deshpande"],
+    "Mumbai Indians": ["Hardik Pandya", "Rohit Sharma", "Suryakumar Yadav", "Ishan Kishan", "Jasprit Bumrah", "Gerald Coetzee", "Tim David"],
+    "Kolkata Knight Riders": ["Shreyas Iyer", "Sunil Narine", "Andre Russell", "Rinku Singh", "Venkatesh Iyer", "Mitchell Starc", "Varun Chakaravarthy"],
+    "Lucknow Super Giants": ["KL Rahul", "Quinton de Kock", "Nicholas Pooran", "Marcus Stoinis", "Ayush Badoni", "Ravi Bishnoi", "Naveen-ul-Haq"],
+    "Royal Challengers Bengaluru": ["Virat Kohli", "Faf du Plessis", "Glenn Maxwell", "Rajat Patidar", "Mohammed Siraj", "Yash Dayal", "Cameron Green"],
+    "Gujarat Titans": ["Shubman Gill", "Rashid Khan", "David Miller", "Sai Sudharsan", "Mohit Sharma", "Sandip Warrier", "Rahul Tewatia"],
+    "Rajasthan Royals": ["Sanju Samson", "Yashasvi Jaiswal", "Jos Buttler", "Riyan Parag", "Shimron Hetmyer", "Yuzvendra Chahal", "Trent Boult"]
+  };
+
+  function getPlayersForTeam(team: string) {
+    return teamSquads[team] || ["Player A", "Player B", "Player C", "Player D", "Player E", "Player F", "Player G"];
+  }
 
   // Initialize match with AI to find "today's" match
   async function initializeMatch() {
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
-      const prompt = `It is May 2026. Suggest a realistic IPL match for today between two big teams. Return ONLY a JSON object: { "homeTeam": string, "awayTeam": string, "batting": string, "bowling": string, "score": number, "wickets": number, "overs": number, "ballsInOver": number, "striker": string, "bowler": string, "partnership": number }`;
+      const prompt = `It is May 13th, 2026, 8:15 PM IST (Indian Standard Time). 
+      This is a LIVE IPL match between Royal Challengers Bengaluru (RCB) and Kolkata Knight Riders (KKR).
+      Check for any simulation/hypothetical "real-time" information: If there's a rain delay or toss delay, specify { "status": "DELAYED" }.
+      Otherwise, generate a realistic score if the match had started at 7:30 PM IST.
+      The user says: "the match is delayed and both the teams are yet to bat currently". Honor this feedback.
+      Return ONLY a JSON object: { "homeTeam": "Royal Challengers Bengaluru", "awayTeam": "Kolkata Knight Riders", "batting": string, "bowling": string, "score": number, "wickets": number, "overs": number, "ballsInOver": number, "striker": string, "bowler": string, "partnership": number, "target": number (optional), "status": "LIVE" | "DELAYED" | "UPCOMING", "id": string }`;
       
       const result = await Promise.race([
         model.generateContent(prompt),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("AI Timeout")), 8000))
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("AI Timeout")), 12000))
       ]);
 
       const text = result.response.text().trim();
-      const jsonStart = text.indexOf('{');
-      const jsonEnd = text.lastIndexOf('}') + 1;
-      const data = JSON.parse(text.slice(jsonStart, jsonEnd));
-      
-      matchState = { ...matchState, ...data, id: `ipl-2026-ai-${Date.now()}`, status: "LIVE", lastBalls: ["1", "4", "0", "2"] };
-      console.log("Match initialized via AI:", matchState);
-      io.emit("matchUpdate", matchState);
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const data = JSON.parse(jsonMatch[0]);
+        matchState = { 
+          ...matchState, 
+          ...data,
+          lastBalls: data.status === "LIVE" ? ["1", "4", "0", "2", "6", "1"] : []
+        };
+        console.log("🔥 Match initialized via AI for May 13, 2026 (RCB vs KKR): Status ", matchState.status);
+        io.emit("matchUpdate", matchState);
+        
+        const statusText = matchState.status === "DELAYED" ? "MATCH DELAYED DUE TO RAIN" : "LIVE FROM CHINNASWAMY";
+        io.emit("matchEvent", { type: "system", text: `${statusText}: Royal Challengers Bengaluru vs Kolkata Knight Riders!` });
+      }
     } catch (error) {
       console.error("AI Init failed or timed out, using defaults:", error);
-      // Ensure we at least emit the default state to any waiting clients
       io.emit("matchUpdate", matchState);
     }
   }
@@ -120,7 +144,8 @@ async function startServer() {
       matchState.wickets++;
       matchState.partnership = 0;
       // Change striker on wicket
-      matchState.striker = cskPlayers[Math.floor(Math.random() * cskPlayers.length)];
+      const battingSquad = getPlayersForTeam(matchState.batting);
+      matchState.striker = battingSquad[Math.floor(Math.random() * battingSquad.length)];
     } else {
       const runs = parseInt(result);
       matchState.score += runs;
@@ -132,11 +157,18 @@ async function startServer() {
       matchState.overs++;
       matchState.ballsInOver = 0;
       // Change bowler on new over
-      matchState.bowler = miBowlers[Math.floor(Math.random() * miBowlers.length)];
+      const bowlingSquad = getPlayersForTeam(matchState.bowling);
+      matchState.bowler = bowlingSquad[Math.floor(Math.random() * bowlingSquad.length)];
     }
 
     const totalOversAsFloat = matchState.overs + (matchState.ballsInOver / 6);
     matchState.crr = totalOversAsFloat > 0 ? parseFloat((matchState.score / totalOversAsFloat).toFixed(2)) : 0;
+
+    // Check for target completion if chasing
+    if (matchState.target && matchState.score >= matchState.target) {
+        matchState.status = "FINISHED";
+        io.emit("matchEvent", { type: "system", text: `MATCH FINISHED! ${matchState.batting} WON THE MATCH!` });
+    }
 
     io.emit("matchUpdate", matchState);
     io.emit("matchEvent", { type: result, text: getBallText(result, matchState) });
@@ -168,10 +200,9 @@ async function startServer() {
 
   // Simulations
   setInterval(() => {
-    if (matchState.overs < 20 && matchState.wickets < 10) {
+    if (matchState.status === "LIVE" && matchState.overs < 20 && matchState.wickets < 10) {
       simulateBall();
-    } else {
-      matchState.status = "FINISHED";
+    } else if (matchState.status === "FINISHED") {
       io.emit("matchUpdate", matchState);
     }
   }, 2000);
@@ -190,6 +221,7 @@ async function startServer() {
     console.log("Client connected:", socket.id);
     // Immediate send on connect
     socket.emit("matchUpdate", matchState);
+    if (currentPoll) socket.emit("activePoll", currentPoll);
     
     socket.on("sendReaction", (emoji) => {
       io.emit("newReaction", { emoji, timestamp: Date.now() });
@@ -201,6 +233,29 @@ async function startServer() {
 
     socket.on("ping", () => socket.emit("pong"));
   });
+
+  // Poll generation logic
+  function emitDynamicPoll() {
+    if (!matchState) return;
+    const battingSquad = getPlayersForTeam(matchState.batting);
+    const options = [battingSquad[0], battingSquad[1], "Neither"];
+    
+    currentPoll = {
+      id: `poll_${Date.now()}`,
+      matchId: matchState.id,
+      question: `Who will hit the next boundary for ${matchState.batting}?`,
+      options: options,
+      active: true,
+      results: [33, 33, 34]
+    };
+    
+    io.emit("activePoll", currentPoll);
+  }
+
+  // Initial poll
+  setTimeout(emitDynamicPoll, 5000);
+  // New poll every 2 minutes
+  setInterval(emitDynamicPoll, 120000);
 
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });

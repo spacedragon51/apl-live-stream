@@ -42,6 +42,10 @@ export default function App() {
       setMatch(data);
     });
 
+    socket.on("activePoll", (poll: Poll) => {
+      setActivePoll(poll);
+    });
+
     socket.on("matchEvent", (event: { type: string, text: string }) => {
       setEvents(prev => [{ ...event, timestamp: Date.now() }, ...prev.slice(0, 19)]);
     });
@@ -58,15 +62,6 @@ export default function App() {
     setInsights([
       { id: '1', text: "Analyzing the match situation for live tactical insights...", type: 'TACTICAL', timestamp: Date.now() }
     ]);
-
-    setActivePoll({
-      id: 'poll_ipl_1',
-      matchId: 'match_ipl_1',
-      question: "Who will hit the next six?",
-      options: ["Ruturaj Gaikwad", "Daryl Mitchell", "Neither"],
-      active: true,
-      results: [42, 38, 20]
-    });
 
     return () => {
       socket.disconnect();

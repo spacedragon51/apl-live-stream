@@ -6,7 +6,7 @@ export interface Match {
   bowling: string;
   score: number;
   wickets: number;
-  status: 'LIVE' | 'FINISHED' | 'UPCOMING';
+  status: 'LIVE' | 'FINISHED' | 'UPCOMING' | 'DELAYED';
   overs: number;
   ballsInOver: number;
   crr: number;

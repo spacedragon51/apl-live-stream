@@ -13,18 +13,30 @@ export default function MatchHeader({ match }: { match: Match }) {
             <Trophy className="w-12 h-12 text-yellow-400" />
           </div>
           <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tighter mb-2">{match.homeTeam}</h2>
-          <span className="text-xs font-mono text-white/30 tracking-[0.2em]">BATTING</span>
+          <span className="text-xs font-mono text-white/30 tracking-[0.2em]">
+            {match.batting === match.homeTeam ? "BATTING" : "BOWLING"}
+          </span>
         </div>
 
         {/* Scoreboard */}
         <div className="flex flex-col items-center gap-4 py-6 px-10 bg-white/5 rounded-[3rem] border border-white/10 backdrop-blur-xl">
           <div className="flex flex-col items-center gap-1">
-            <div className="px-3 py-1 bg-red-600 rounded-full text-[10px] font-bold text-white uppercase tracking-tighter animate-pulse mb-2">LIVE</div>
+            <div className={`px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase tracking-tighter mb-2 ${
+              match.status === 'DELAYED' ? 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.4)]' : 
+              match.status === 'FINISHED' ? 'bg-zinc-600' : 'bg-red-600 animate-pulse'
+            }`}>
+              {match.status === 'DELAYED' ? 'DELAYED' : match.status === 'FINISHED' ? 'FINAL' : 'LIVE'}
+            </div>
             <div className="flex items-baseline gap-2">
               <span className="text-6xl md:text-7xl font-black tracking-tighter tabular-nums text-white">
-                {match.score}/{match.wickets}
+                {match.status === 'DELAYED' && match.score === 0 ? '0/0' : `${match.score}/${match.wickets}`}
               </span>
             </div>
+            {match.target && (
+              <div className="text-[10px] font-mono font-bold text-white/40 uppercase tracking-widest mt-1">
+                Target: <span className="text-yellow-400">{match.target}</span>
+              </div>
+            )}
           </div>
           
           <div className="flex items-center gap-3 px-5 py-2 bg-white/10 rounded-full border border-white/10">
@@ -52,7 +64,9 @@ export default function MatchHeader({ match }: { match: Match }) {
             <Trophy className="w-12 h-12 text-blue-400" />
           </div>
           <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tighter mb-2">{match.awayTeam}</h2>
-          <span className="text-xs font-mono text-white/30 tracking-[0.2em]">BOWLING</span>
+          <span className="text-xs font-mono text-white/30 tracking-[0.2em]">
+            {match.batting === match.awayTeam ? "BATTING" : "BOWLING"}
+          </span>
         </div>
       </div>
       
@@ -61,10 +75,12 @@ export default function MatchHeader({ match }: { match: Match }) {
             <span>CRR</span>
             <span className="text-white text-lg font-bold">{match.crr}</span>
         </div>
-        {match.rrr && (
+        {match.target && (
           <div className="flex flex-col items-center">
               <span>RRR</span>
-              <span className="text-white text-lg font-bold">{match.rrr}</span>
+              <span className="text-white text-lg font-bold">
+                {Math.max(0, parseFloat(((match.target - match.score) / (20 - (match.overs + match.ballsInOver/6))).toFixed(2)))}
+              </span>
           </div>
         )}
         <div className="flex flex-col items-center">
